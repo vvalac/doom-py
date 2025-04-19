@@ -1,5 +1,7 @@
 from wad_data import WADData
 from map_renderer import MapRenderer
+from view_renderer import ViewRenderer
+from seg_handler import SegHandler
 from player import Player
 from settings import *
 from bsp import BSP
@@ -20,9 +22,12 @@ class DoomEngine:
         self.map_renderer = MapRenderer(self)
         self.player = Player(self)
         self.bsp = BSP(self)
+        self.seg_handler = SegHandler(self)
+        self.view_renderer = ViewRenderer(self)
 
     def update(self):
         self.player.update()
+        self.seg_handler.update()
         self.bsp.update()
         self.dt = self.clock.tick()
         pg.display.set_caption(f"FPS: {self.clock.get_fps()}")

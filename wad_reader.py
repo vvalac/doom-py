@@ -19,12 +19,24 @@ class WADReader:
         self.wad_file.seek(offset)
         data_bytes = self.wad_file.read(12)
         return Segment.from_bytes(data_bytes)
+    
+    def read_sector(self, offset):
+        # 26 bytes = 2h + 2h + 8c + 8c + 2H x 3
+        self.wad_file.seek(offset)
+        data_bytes = self.wad_file.read(26)
+        return Sector.from_bytes(data_bytes)
 
     def read_sub_sector(self, offset):
         # 4 bytes = 2h + 2h
         self.wad_file.seek(offset)
         data_bytes = self.wad_file.read(4)
         return SubSector.from_bytes(data_bytes)
+    
+    def read_sidedef(self, offset):
+        # 30 bytes = 2h + 2h + 8c + 8c + 8c + 2H
+        self.wad_file.seek(offset)
+        data_bytes = self.wad_file.read(30)
+        return Sidedef.from_bytes(data_bytes)
 
     def read_nodes(self, offset):
         # 28 bytes = 2h x 12 + 2H x 2

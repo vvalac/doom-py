@@ -2,6 +2,15 @@ import struct
 from pygame.math import Vector2 as vec2
 # H - uint16, h - int16, I - uint32, i - int32, B - uint8, b - int8, c - char
 
+def parse_texture(chars):
+    # Handles both tuple of bytes (from 8c) and bytes object (from 8s)
+    if isinstance(chars, (tuple, list)):
+        return b''.join(chars).decode('ascii').rstrip('\0')
+    elif isinstance(chars, bytes):
+        return chars.decode('ascii').rstrip('\0')
+    else:
+        raise TypeError("parse_texture expects a tuple/list of bytes or a bytes object")
+
 class Thing:
     # 10 bytes
     __slots__= [
@@ -31,12 +40,12 @@ class Segment:
         'direction',
         'offset',
     ]
-    __slots__ += ['start_vertex', 'end_vertex', 'linedef']
+    __slots__ += ['start_vertex', 'end_vertex', 'linedef', 'front_sector', 'back_sector']
 
     @classmethod
     def from_bytes(cls, data):
         # 2h x 6 = 12 bytes
-        fields = struct.unpack('6h', data)
+        fields = struct.unpack('<6h', data)
         obj = cls()
         (
             obj.start_vertex_id,
@@ -46,6 +55,53 @@ class Segment:
             obj.direction,
             obj.offset,
         ) = fields
+        return obj
+
+class Sector:
+    # 26 bytes = 2h + 2h + 8c + 8c + 2H x 3
+    __slots__ = [
+        'floor_height',
+        'ceil_height',
+        'floor_texture',
+        'ceil_texture',
+        'light_level',
+        'type',
+        'tag',
+    ]
+    @classmethod
+    def from_bytes(cls, data):
+        fields = struct.unpack('<2h8s8s3H', data)
+        obj = cls()
+        obj.floor_height = fields[0]
+        obj.ceil_height = fields[1]
+        obj.floor_texture = parse_texture(fields[2])
+        obj.ceil_texture = parse_texture(fields[3])
+        obj.light_level = fields[4]
+        obj.type = fields[5]
+        obj.tag = fields[6]
+        return obj
+
+class Sidedef:
+    # 30 bytes = 2h + 2h + 8c + 8c + 8c + 2H
+    __slots__ = [
+        'x_offset',
+        'y_offset',
+        'upper_texture',
+        'lower_texture',
+        'middle_texture',
+        'sector_id',
+    ]
+    __slots__ += ['sector']
+    @classmethod
+    def from_bytes(cls, data):
+        fields = struct.unpack('<2h8s8s8sH', data)
+        obj = cls()
+        obj.x_offset = fields[0]
+        obj.y_offset = fields[1]
+        obj.upper_texture = parse_texture(fields[2])
+        obj.lower_texture = parse_texture(fields[3])
+        obj.middle_texture = parse_texture(fields[4])
+        obj.sector_id = fields[5]
         return obj
 
 class SubSector:
@@ -58,7 +114,7 @@ class SubSector:
     @classmethod
     def from_bytes(cls, data):
         # 2h + 2h = 4 bytes
-        fields = struct.unpack('2h', data)
+        fields = struct.unpack('<2h', data)
         obj = cls()
         (
             obj.seg_count,
@@ -86,7 +142,7 @@ class Node:
     @classmethod
     def from_bytes(cls, data):
         # 4h (partition) + 8h (bbox) + 2H (child ids) = 28 bytes
-        fields = struct.unpack('4h8h2H', data)
+        fields = struct.unpack('<4h8h2H', data)
         obj = cls()
         (
             obj.x_partition,
@@ -120,10 +176,12 @@ class Linedef:
         'back_sidedef_id',
     ]
 
+    __slots__ += ['front_sidedef', 'back_sidedef']
+
     @classmethod
     def from_bytes(cls, data):
         import struct
-        fields = struct.unpack('7H', data)
+        fields = struct.unpack('<7H', data)
         obj = cls()
         (
             obj.start_vertex_id,
