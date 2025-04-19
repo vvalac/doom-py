@@ -9,6 +9,7 @@ class Player:
         self.pos = self.thing.pos
         self.angle = self.thing.angle
         self.DIAG_MOV_CORR = 1 / math.sqrt(2)
+        self.height = PLAYER_HEIGHT
 
     def update(self):
         self.control()
